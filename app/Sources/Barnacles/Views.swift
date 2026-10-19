@@ -413,6 +413,7 @@ struct BarnacleDetail: View {
             }
 
             RowGroup {
+                NameRow(barnacle: barnacle)
                 SettingsRow(icon: IconTile(color: running ? .green : .gray, symbol: "power", size: 24),
                             title: "Status") {
                     StatusLabel(running: running)
@@ -440,6 +441,39 @@ struct BarnacleDetail: View {
                             title: "Delete Barnacle\u{2026}", destructive: true, action: onDelete)
                     .disabled(busy)
             }
+        }
+    }
+}
+
+/// Editable name, saved when you press Return or click elsewhere.
+struct NameRow: View {
+    @EnvironmentObject private var store: BarnacleStore
+    let barnacle: Barnacle
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        SettingsRow(icon: IconTile(barnacle: barnacle, size: 24), title: "Name") {
+            TextField("", text: $text)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .foregroundStyle(.secondary)
+                .focused($focused)
+                .onSubmit(save)
+                .frame(maxWidth: 260)
+        }
+        .onAppear { text = barnacle.name }
+        .onChange(of: focused) { _, isFocused in
+            if !isFocused { save() }
+        }
+    }
+
+    private func save() {
+        do {
+            try store.rename(barnacle, to: text)
+        } catch {
+            text = barnacle.name
+            store.errorMessage = error.localizedDescription
         }
     }
 }
@@ -573,7 +607,7 @@ struct NewBarnacleSheet: View {
         .padding(22)
         .frame(width: 440)
         .onAppear {
-            color = BarnacleColor.allCases.first { c in !store.barnacles.contains { $0.color == c } } ?? .blue
+            color = store.nextColor
             nameFocused = true
         }
     }

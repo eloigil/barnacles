@@ -33,6 +33,9 @@ struct Barnacle: Identifiable, Hashable {
 /// ~/.barnacles/barnacles.json.
 @MainActor
 final class BarnacleStore: ObservableObject {
+    /// One store for the window, the menus and the Dock menu.
+    static let shared = BarnacleStore()
+
     @Published private(set) var barnacles: [Barnacle] = []
     @Published private(set) var running: [String: NSRunningApplication] = [:]
     @Published private(set) var busy: Set<String> = []
@@ -53,7 +56,7 @@ final class BarnacleStore: ObservableObject {
         var color: BarnacleColor
     }
 
-    init() {
+    private init() {
         refresh()
         for barnacle in barnacles { Launcher.refreshIfPresent(for: barnacle) }
     }
@@ -105,12 +108,13 @@ final class BarnacleStore: ObservableObject {
 
     // MARK: Creating
 
-    /// Returns a problem with the name, or nil if it's fine.
-    func nameProblem(_ raw: String) -> String? {
+    /// Returns a problem with the name, or nil if it's fine. `excluding` is the
+    /// barnacle being renamed, which may keep its own name.
+    func nameProblem(_ raw: String, excluding: Barnacle? = nil) -> String? {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if name.isEmpty { return "Give your barnacle a name." }
         if name.count > 30 { return "That name is a bit long. Try something shorter." }
-        if barnacles.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
+        if barnacles.contains(where: { $0.id != excluding?.id && $0.name.caseInsensitiveCompare(name) == .orderedSame }) {
             return "You already have a barnacle called \u{201C}\(name)\u{201D}."
         }
         return nil
@@ -153,6 +157,56 @@ final class BarnacleStore: ObservableObject {
 
         refresh()
         return barnacle
+    }
+
+    /// The first color no barnacle uses yet.
+    var nextColor: BarnacleColor {
+        let all = BarnacleColor.allCases
+        return all.first { c in !barnacles.contains { $0.color == c } } ?? all[barnacles.count % all.count]
+    }
+
+    /// "Window 2", "Window 3", … Your main Orca counts as window 1.
+    var nextWindowName: String {
+        var n = 2
+        while nameProblem("Window \(n)") != nil { n += 1 }
+        return "Window \(n)"
+    }
+
+    /// Creates a barnacle with an automatic name and your Orca settings, and
+    /// opens it. Returns nil and sets `errorMessage` if that fails.
+    @discardableResult
+    func newWindow() -> Barnacle? {
+        refresh()
+        guard orcaInstalled else {
+            errorMessage = "Orca isn't installed. Install it, then try again."
+            return nil
+        }
+        do {
+            let barnacle = try create(name: nextWindowName, color: nextColor, copySettings: mainOrcaHasSettings)
+            open(barnacle)
+            return barnacle
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
+        }
+    }
+
+    func rename(_ b: Barnacle, to raw: String) throws {
+        let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name != b.name else { return }
+        if let problem = nameProblem(name, excluding: b) { throw BarnacleError(problem) }
+
+        var meta = loadMetadata()
+        meta[b.id] = Metadata(name: name, color: b.color)
+        try saveMetadata(meta)
+
+        // The launcher is named after the barnacle, so replace it.
+        let hadLauncher = FileManager.default.fileExists(atPath: Launcher.url(forName: b.name).path)
+        try? FileManager.default.removeItem(at: Launcher.url(forName: b.name))
+        if hadLauncher {
+            _ = try? Launcher.write(for: Barnacle(id: b.id, name: name, color: b.color, folder: b.folder))
+        }
+        refresh()
     }
 
     /// "Side Project!" -> "side-project"

@@ -12,6 +12,12 @@ Open **Barnacles**, click **New Barnacle**, give it a name and a color, and it o
 new Orca window. Pick a barnacle in the sidebar to open, show or quit it, copy your Orca
 settings into it again, or delete it (its data goes to the Trash; your code is never touched).
 
+For a quick extra window, right-click Barnacles in the Dock and choose **New Orca Window**
+(or press ⇧⌘N). It creates "Window 2", "Window 3"… with your Orca settings and opens it
+right away; rename it later from its page. The same Dock menu lists your barnacles to open.
+Barnacles keeps running after you close its window so this menu stays available; choose
+Options > Keep in Dock to keep it there.
+
 Each barnacle also gets a launcher app with Orca's icon and a colored badge in
 `~/Applications/Barnacles`, so you can open it from Spotlight ("Orca Work") or keep it
 in the Dock.
