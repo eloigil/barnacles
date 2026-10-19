@@ -1,0 +1,173 @@
+#!/bin/bash
+# barnacles: run several Orca instances side by side.
+#
+# Orca only allows one running instance per profile (its userData folder).
+# Each barnacle is its own profile, so each one can run next to the others.
+#
+# Written for the macOS system bash (3.2), so no bash 4 features.
+
+set -euo pipefail
+
+ORCA_BUNDLE_ID="com.stablyai.orca"
+# Kept short on purpose: Orca puts Unix sockets inside the profile folder, and
+# macOS caps socket paths at 103 bytes.
+PROFILES_DIR="${BARNACLES_HOME:-$HOME/.barnacles}"
+
+die() { echo "barnacles: $*" >&2; exit 1; }
+
+usage() {
+  cat <<EOF
+barnacles: run several Orca instances side by side
+
+Usage:
+  barnacles new <name>                 Create an instance
+  barnacles open <name>                Start an instance, or focus it if running
+  barnacles list                       Show instances and whether they're running
+  barnacles rm <name> [-y]             Delete an instance and its data
+
+Names may use letters, digits, '-' and '_'.
+
+Profiles live in: $PROFILES_DIR
+EOF
+}
+
+# --- helpers ---------------------------------------------------------------
+
+check_name() {
+  [ $# -ge 1 ] && [ -n "$1" ] || die "missing instance name"
+  case "$1" in
+    -*) die "invalid name '$1'" ;;
+  esac
+  echo "$1" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$' \
+    || die "invalid name '$1' (use letters, digits, '-' and '_', max 40 chars)"
+}
+
+profile_dir() { echo "$PROFILES_DIR/$1"; }
+
+# Longest socket path Orca adds under the profile is about 23 bytes
+# ("/daemon/daemon-v36.sock", "/o-<pid>-xxxx.sock"); keep some slack.
+MAX_SOCKET_PATH=103
+SOCKET_SUFFIX_RESERVE=32
+
+check_path_length() {
+  local dir len max
+  dir="$(profile_dir "$1")"
+  len=${#dir}
+  max=$((MAX_SOCKET_PATH - SOCKET_SUFFIX_RESERVE))
+  [ "$len" -le "$max" ] || die "profile path is too long for Orca's sockets ($len chars, max $max): $dir
+Use a shorter name, or set BARNACLES_HOME to a shorter folder."
+}
+
+require_profile() {
+  [ -d "$(profile_dir "$1")" ] || die "no instance named '$1' (create it with: barnacles new $1)"
+}
+
+# Path to Orca.app, or empty if it isn't installed.
+find_orca_app() {
+  if [ -n "${BARNACLES_ORCA_APP:-}" ]; then
+    echo "$BARNACLES_ORCA_APP"
+  elif [ -d /Applications/Orca.app ]; then
+    echo /Applications/Orca.app
+  else
+    mdfind "kMDItemCFBundleIdentifier == '$ORCA_BUNDLE_ID'" 2>/dev/null | head -n 1
+  fi
+}
+
+# PID of the Orca main process using this profile, or empty if not running.
+running_pid() {
+  local dir pid cmd
+  dir="$(profile_dir "$1")"
+  while read -r pid cmd; do
+    case "$cmd" in
+      */Contents/MacOS/Orca\ --user-data-dir="$dir" | \
+      */Contents/MacOS/Orca\ --user-data-dir="$dir"\ *)
+        echo "$pid"
+        return
+        ;;
+    esac
+  done < <(ps -axo pid=,command=)
+}
+
+launch() {
+  local orca
+  orca="$(find_orca_app)"
+  [ -n "$orca" ] && [ -d "$orca" ] || die "Orca.app not found (set BARNACLES_ORCA_APP to its path)"
+  # -n forces a new process. If this profile is already running, Orca's own
+  # single-instance lock hands off to the existing window and the new one exits.
+  open -n -a "$orca" --args --user-data-dir="$(profile_dir "$1")"
+}
+
+# --- commands --------------------------------------------------------------
+
+cmd_new() {
+  [ $# -eq 1 ] || die "usage: barnacles new <name>"
+  local name="$1"
+  check_name "$name"
+  [ ! -e "$(profile_dir "$name")" ] || die "instance '$name' already exists"
+  check_path_length "$name"
+
+  mkdir -p "$(profile_dir "$name")"
+  echo "Created instance '$name'"
+  echo "Start it with: barnacles open $name"
+}
+
+cmd_open() {
+  [ $# -eq 1 ] || die "usage: barnacles open <name>"
+  check_name "$1"
+  require_profile "$1"
+  check_path_length "$1"
+  launch "$1"
+}
+
+cmd_list() {
+  local dir name pid status found=0
+  printf '%-20s %s\n' NAME STATUS
+  if [ -d "$PROFILES_DIR" ]; then
+    for dir in "$PROFILES_DIR"/*/; do
+      [ -d "$dir" ] || continue
+      found=1
+      name="$(basename "$dir")"
+      pid="$(running_pid "$name")"
+      if [ -n "$pid" ]; then status="running ($pid)"; else status="stopped"; fi
+      printf '%-20s %s\n' "$name" "$status"
+    done
+  fi
+  [ "$found" = 1 ] || echo "(no instances yet; create one with: barnacles new <name>)"
+}
+
+cmd_rm() {
+  local name="" yes=0 answer
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -y|--yes) yes=1 ;;
+      *) [ -z "$name" ] || die "unexpected argument '$1'"; name="$1" ;;
+    esac
+    shift
+  done
+  check_name "$name"
+  require_profile "$name"
+  [ -z "$(running_pid "$name")" ] || die "instance '$name' is running; quit it first"
+
+  if [ "$yes" = 0 ]; then
+    [ -t 0 ] || die "refusing to delete '$name' without a terminal; pass -y to confirm"
+    printf "Delete instance '%s' and all its Orca data (settings, sessions, sign-ins)? [y/N] " "$name"
+    read -r answer
+    case "$answer" in y|Y|yes|YES) ;; *) echo "Cancelled."; exit 1 ;; esac
+  fi
+
+  rm -rf "$(profile_dir "$name")"
+  echo "Removed instance '$name'"
+}
+
+# --- main ------------------------------------------------------------------
+
+[ $# -ge 1 ] || { usage; exit 1; }
+cmd="$1"; shift
+case "$cmd" in
+  new) cmd_new "$@" ;;
+  open) cmd_open "$@" ;;
+  list|ls) cmd_list "$@" ;;
+  rm|remove) cmd_rm "$@" ;;
+  -h|--help|help) usage ;;
+  *) die "unknown command '$cmd' (see: barnacles --help)" ;;
+esac
