@@ -11,7 +11,7 @@ struct BarnaclesApp: App {
             ContentView()
                 .environmentObject(store)
         }
-        .defaultSize(width: 560, height: 440)
+        .defaultSize(width: 820, height: 600)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Barnacle…") { store.showingNewSheet = true }

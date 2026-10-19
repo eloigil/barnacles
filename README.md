@@ -8,8 +8,8 @@ block each other. Your normal Orca keeps running as usual.
 
 ## The app
 
-Open **Barnacles**, click **+**, give the barnacle a name and a color, and it opens as a
-new Orca window. From the list you can open, show or quit each barnacle, copy your Orca
+Open **Barnacles**, click **New Barnacle**, give it a name and a color, and it opens as a
+new Orca window. Pick a barnacle in the sidebar to open, show or quit it, copy your Orca
 settings into it again, or delete it (its data goes to the Trash; your code is never touched).
 
 Each barnacle also gets a launcher app with Orca's icon and a colored badge in
