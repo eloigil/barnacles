@@ -1,0 +1,62 @@
+# Barnacles
+
+Run several [Orca](https://github.com/stablyai/orca) instances side by side on macOS.
+
+Orca allows only one running instance per profile (its data folder). Barnacles gives each
+instance its own profile and starts Orca with `--user-data-dir`, so instances don't
+block each other. Your normal Orca keeps running as usual.
+
+## Install
+
+```bash
+ln -s "$PWD/barnacles" ~/.local/bin/barnacles
+```
+
+Any folder on your `PATH` works.
+
+## Use
+
+```bash
+barnacles new work          # creates the instance and ~/Applications/Barnacles/Orca work.app,
+                            # copying settings from your main Orca
+barnacles open work         # starts it, or focuses it if it's already running
+barnacles list              # shows instances and whether they're running
+barnacles rm work           # deletes the launcher and the instance's data (asks first)
+barnacles rm work --keep-data
+barnacles app work          # recreates a launcher you deleted
+barnacles sync work         # copies your main Orca's settings into "work" again (quit it first)
+```
+
+## Settings
+
+New instances copy their settings from your main Orca: preferences, theme, fonts,
+agents and model settings, plus Orca's onboarding (so it isn't shown again).
+Projects, workspaces and terminal sessions are never copied; each instance has its own.
+
+- `barnacles new work --from other` copies from another instance instead.
+- `barnacles new work --blank` starts with Orca's defaults.
+- `barnacles sync work [--from other]` copies settings again later. The previous file is
+  saved as `orca-data.json.barnacles-bak`.
+
+This is a copy, not live syncing. Each running Orca keeps its settings in memory and saves
+them back, so two instances sharing one settings file would overwrite each other's changes.
+
+GitHub (through the `gh` CLI) and agent sign-ins in `~/.claude` and `~/.codex` live
+outside Orca's profile, so every instance shares them automatically.
+
+Each launcher app shows up in Spotlight ("Orca work") and can be dragged to the Dock.
+
+## Good to know
+
+- **Each instance has its own projects and sessions.** Settings are copied in when the
+  instance is created (see above).
+- **Some things are shared.** Folders in your home directory such as `~/.orca`
+  (for example Linear tokens), `~/.claude` and `~/.codex` are shared by all instances.
+  Orca's agent hooks there are built to handle more than one instance.
+- **Every running instance has the Orca icon in the Dock.** The launcher app quits right
+  after starting Orca, so you can't tell instances apart by their Dock icons.
+- **Data lives in** `~/.barnacles/<name>`. The path is kept short on purpose: Orca puts
+  Unix sockets in that folder, and macOS caps socket paths at 103 characters. Barnacles
+  refuses to create or open an instance whose path is too long.
+- Set `BARNACLES_HOME`, `BARNACLES_APPS_DIR` or `BARNACLES_ORCA_APP` to change
+  where data, launchers or Orca are found.
