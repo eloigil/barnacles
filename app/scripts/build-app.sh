@@ -15,11 +15,11 @@ rm -rf "$APP" "$WORK"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$WORK/AppIcon.iconset"
 cp "$BIN" "$APP/Contents/MacOS/Barnacles"
 
-# App icon
-swift scripts/make-icon.swift "$WORK/icon.png"
+# App icon, from the 1024px master in Resources/
+ICON="Resources/AppIcon.png"
 for s in 16 32 128 256 512; do
-  sips -z $s $s "$WORK/icon.png" --out "$WORK/AppIcon.iconset/icon_${s}x${s}.png" >/dev/null
-  sips -z $((s * 2)) $((s * 2)) "$WORK/icon.png" --out "$WORK/AppIcon.iconset/icon_${s}x${s}@2x.png" >/dev/null
+  sips -z $s $s "$ICON" --out "$WORK/AppIcon.iconset/icon_${s}x${s}.png" >/dev/null
+  sips -z $((s * 2)) $((s * 2)) "$ICON" --out "$WORK/AppIcon.iconset/icon_${s}x${s}@2x.png" >/dev/null
 done
 iconutil -c icns "$WORK/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
 
