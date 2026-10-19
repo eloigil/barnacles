@@ -13,6 +13,8 @@ ORCA_BUNDLE_ID="com.stablyai.orca"
 # macOS caps socket paths at 103 bytes.
 PROFILES_DIR="${BARNACLES_HOME:-$HOME/.barnacles}"
 APPS_DIR="${BARNACLES_APPS_DIR:-$HOME/Applications/Barnacles}"
+# The profile your normal Orca uses; settings are copied from here by default.
+MAIN_PROFILE="${BARNACLES_MAIN_PROFILE:-$HOME/Library/Application Support/orca}"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
 die() { echo "barnacles: $*" >&2; exit 1; }
@@ -22,12 +24,19 @@ usage() {
 barnacles: run several Orca instances side by side
 
 Usage:
-  barnacles new <name> [--no-app]      Create an instance (and its launcher app)
+  barnacles new <name> [--no-app] [--blank] [--from <src>]
+                                       Create an instance (and its launcher app),
+                                       copying settings from your main Orca
   barnacles open <name>                Start an instance, or focus it if running
   barnacles list                       Show instances and whether they're running
   barnacles rm <name> [--keep-data] [-y]
                                        Delete an instance's launcher and data
   barnacles app <name>                 Recreate an instance's launcher app
+  barnacles sync <name> [--from <src>] Copy settings into a stopped instance again
+
+<src> is "main" (your normal Orca, the default) or another instance's name.
+Settings means preferences, theme, agents and onboarding; projects, workspaces
+and terminal sessions stay separate per instance.
 
 Names may use letters, digits, '-' and '_'.
 
@@ -94,6 +103,71 @@ running_pid() {
   done < <(ps -axo pid=,command=)
 }
 
+# Folder of a settings source: "main" or an instance name.
+source_dir() {
+  if [ "$1" = main ]; then
+    echo "$MAIN_PROFILE"
+  else
+    check_name "$1"
+    require_profile "$1"
+    profile_dir "$1"
+  fi
+}
+
+# Copy Orca settings from one userData folder into another.
+# Orca keeps everything in profiles/<id>/orca-data.json; only the "settings",
+# "onboarding" and the non-project-specific parts of "ui" are copied.
+copy_settings() {
+  command -v python3 >/dev/null || die "python3 is needed to copy settings"
+  python3 -I - "$1" "$2" <<'EOF'
+import json, os, re, shutil, sys, tempfile
+
+src_root, dst_root = sys.argv[1], sys.argv[2]
+
+def data_file(root):
+    profile_id = "local-default"
+    try:
+        with open(os.path.join(root, "orca-profile-index.json")) as f:
+            profile_id = json.load(f).get("activeProfileId") or profile_id
+    except (OSError, ValueError):
+        pass
+    return os.path.join(root, "profiles", profile_id, "orca-data.json")
+
+src_file = data_file(src_root)
+if not os.path.isfile(src_file):
+    sys.exit("barnacles: no Orca settings found at " + src_file)
+with open(src_file) as f:
+    src = json.load(f)
+
+dst_file = data_file(dst_root)
+if os.path.isfile(dst_file):
+    with open(dst_file) as f:
+        dst = json.load(f)
+    shutil.copy2(dst_file, dst_file + ".barnacles-bak")
+else:
+    dst = {"schemaVersion": src.get("schemaVersion", 1)}
+
+# UI state tied to this instance's own repos, panes, windows and update checks.
+LOCAL_UI = re.compile(
+    r"Repo|repo[A-Z]|PaneKey|[Ww]orktreeId|lastActive|collapsedGroups|activeView"
+    r"|HostIds|HostOrder|windowMaximized|UpdateCheck|UpdateVersion"
+)
+ui = dict(dst.get("ui") or {})
+ui.update({k: v for k, v in (src.get("ui") or {}).items() if not LOCAL_UI.search(k)})
+
+dst["settings"] = src.get("settings", {})
+dst["onboarding"] = src.get("onboarding", {})
+dst["ui"] = ui
+
+os.makedirs(os.path.dirname(dst_file), mode=0o700, exist_ok=True)
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dst_file), prefix=".orca-data.")
+with os.fdopen(fd, "w") as f:
+    json.dump(dst, f, indent=2)
+os.chmod(tmp, 0o600)
+os.replace(tmp, dst_file)
+EOF
+}
+
 launch() {
   local orca
   orca="$(find_orca_app)"
@@ -150,10 +224,12 @@ EOF
 # --- commands --------------------------------------------------------------
 
 cmd_new() {
-  local name="" make_app=1
+  local name="" make_app=1 from=main src
   while [ $# -gt 0 ]; do
     case "$1" in
       --no-app) make_app=0 ;;
+      --blank) from="" ;;
+      --from) [ $# -ge 2 ] || die "--from needs a source"; from="$2"; shift ;;
       *) [ -z "$name" ] || die "unexpected argument '$1'"; name="$1" ;;
     esac
     shift
@@ -161,9 +237,14 @@ cmd_new() {
   check_name "$name"
   [ ! -e "$(profile_dir "$name")" ] || die "instance '$name' already exists"
   check_path_length "$name"
+  if [ -n "$from" ]; then src="$(source_dir "$from")"; fi
 
   mkdir -p "$(profile_dir "$name")"
   echo "Created instance '$name'"
+  if [ -n "$from" ]; then
+    copy_settings "$src" "$(profile_dir "$name")"
+    echo "Copied settings from $from"
+  fi
   if [ "$make_app" = 1 ]; then
     write_app "$name"
     echo "Launcher: $(app_path "$name")"
@@ -234,6 +315,25 @@ cmd_app() {
   echo "Launcher: $(app_path "$1")"
 }
 
+cmd_sync() {
+  local name="" from=main src
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --from) [ $# -ge 2 ] || die "--from needs a source"; from="$2"; shift ;;
+      *) [ -z "$name" ] || die "unexpected argument '$1'"; name="$1" ;;
+    esac
+    shift
+  done
+  check_name "$name"
+  require_profile "$name"
+  [ "$from" != "$name" ] || die "can't copy settings from '$name' into itself"
+  src="$(source_dir "$from")"
+  # Orca rewrites its settings file while running, which would undo the copy.
+  [ -z "$(running_pid "$name")" ] || die "instance '$name' is running; quit it first"
+  copy_settings "$src" "$(profile_dir "$name")"
+  echo "Copied settings from $from into '$name' (previous file saved as orca-data.json.barnacles-bak)"
+}
+
 # --- main ------------------------------------------------------------------
 
 [ $# -ge 1 ] || { usage; exit 1; }
@@ -244,6 +344,7 @@ case "$cmd" in
   list|ls) cmd_list "$@" ;;
   rm|remove) cmd_rm "$@" ;;
   app) cmd_app "$@" ;;
+  sync) cmd_sync "$@" ;;
   -h|--help|help) usage ;;
   *) die "unknown command '$cmd' (see: barnacles --help)" ;;
 esac
