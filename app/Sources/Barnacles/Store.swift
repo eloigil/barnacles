@@ -53,7 +53,10 @@ final class BarnacleStore: ObservableObject {
         var color: BarnacleColor
     }
 
-    init() { refresh() }
+    init() {
+        refresh()
+        for barnacle in barnacles { Launcher.refreshIfPresent(for: barnacle) }
+    }
 
     var mainOrcaHasSettings: Bool { Orca.hasSettings(Orca.mainProfile) }
 
