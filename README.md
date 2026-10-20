@@ -2,6 +2,22 @@
 
 Run several [Orca](https://github.com/stablyai/orca) instances side by side on macOS.
 
+<picture>
+  <source srcset="docs/screenshot-dark.png" media="(prefers-color-scheme: dark)">
+  <img src="docs/screenshot-light.png" alt="The Barnacles window" width="640">
+</picture>
+
+**[Download Barnacles](https://github.com/eloigil/barnacles/releases/latest/download/Barnacles.dmg)**
+(macOS 14+, Apple silicon and Intel) or install it from Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eloigil/barnacles/main/install.sh | bash
+```
+
+Barnacles isn't notarized by Apple yet, so the first time you open the downloaded app macOS
+blocks it: go to System Settings > Privacy & Security and click **Open Anyway**. The
+Terminal install doesn't need this.
+
 Orca allows only one running instance per profile (its data folder). Barnacles gives each
 instance its own profile and starts Orca with `--user-data-dir`, so instances don't
 block each other. Your normal Orca keeps running as usual.
@@ -28,9 +44,21 @@ Build it with the Xcode Command Line Tools (full Xcode isn't needed):
 app/scripts/build-app.sh
 ```
 
-This creates `app/build/Barnacles.app`; drag it into Applications. It's signed only for
-your own Mac. Sharing it with others needs an Apple Developer ID signature and
-notarization.
+This creates `app/build/Barnacles.app`; drag it into Applications. It's a universal app
+(Apple silicon and Intel) with an ad-hoc signature, not a Developer ID one.
+
+### Releasing
+
+`app/scripts/make-dmg.sh` builds `app/build/Barnacles.dmg`. To publish a release, push a
+version tag:
+
+```bash
+git tag v1.1 && git push origin v1.1
+```
+
+The Release workflow builds the DMG and attaches it to a GitHub Release. The download links,
+`install.sh` and the landing page in `docs/` (served by GitHub Pages) always point at the
+latest release.
 
 ## Command line
 

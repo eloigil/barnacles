@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Barnacles — several Orcas, side by side</title>
+<meta name="description" content="Barnacles runs several Orca instances side by side on macOS, each with its own projects and sessions.">
+<meta property="og:title" content="Barnacles">
+<meta property="og:description" content="Run several Orca instances side by side on your Mac.">
+<meta property="og:image" content="https://eloigil.github.io/barnacles/icon.png">
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f5f4;
+    --bg-raised: #ffffff;
+    --text: #1c1c1e;
+    --muted: #6e6e73;
+    --line: rgba(0, 0, 0, 0.09);
+    --glow: rgba(120, 160, 170, 0.28);
+    --btn-bg: #111112;
+    --btn-text: #ffffff;
+    --code-bg: #ffffff;
+    --accent: #23737e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b0b0c;
+      --bg-raised: #161618;
+      --text: #f2f2f3;
+      --muted: #9a9aa0;
+      --line: rgba(255, 255, 255, 0.09);
+      --glow: rgba(110, 190, 200, 0.16);
+      --btn-bg: #f2f2f3;
+      --btn-text: #0b0b0c;
+      --code-bg: #161618;
+      --accent: #6cc6d1;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    text-align: center;
+    padding: 88px 0 56px;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 520px;
+    background: radial-gradient(ellipse 50% 60% at 50% 30%, var(--glow), transparent 70%);
+    pointer-events: none;
+  }
+  .hero > * { position: relative; }
+  .icon { width: 148px; height: 148px; display: block; margin: 0 auto 20px; }
+  h1 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    font-size: clamp(44px, 8vw, 68px);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.02;
+    margin: 0 0 14px;
+  }
+  .tagline {
+    font-size: clamp(19px, 2.6vw, 23px);
+    color: var(--muted);
+    max-width: 30em;
+    margin: 0 auto 34px;
+    line-height: 1.4;
+  }
+  .tagline strong { color: var(--text); font-weight: 600; }
+
+  .download {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 18px;
+    padding: 15px 28px;
+    border-radius: 999px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+  .download:hover { transform: translateY(-1px); opacity: 0.92; }
+  .download:active { transform: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .download { transition: none; }
+    .download:hover { transform: none; }
+  }
+  .download svg { width: 18px; height: 18px; }
+  .meta { color: var(--muted); font-size: 14px; margin: 14px 0 0; text-wrap: balance; }
+  /* 2. Set expectations for the first launch right where people download */
+  .hint { color: var(--muted); font-size: 14px; margin: 4px 0 0; text-wrap: balance; }
+  .nw { white-space: nowrap; }
+  .hint a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .hint a:hover { text-decoration: underline; }
+
+  .terminal {
+    max-width: 780px;
+    margin: 30px auto 0;
+    text-align: left;
+  }
+  .terminal p { color: var(--muted); font-size: 14px; margin: 0 0 8px; text-align: center; }
+  .cmd {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 6px 6px 6px 16px;
+  }
+  .cmd code {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+    font: 13.5px/1.6 ui-monospace, "SF Mono", Menlo, monospace;
+    padding: 6px 0;
+    scrollbar-width: none;
+    border-radius: 4px;
+  }
+  .cmd code.more {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  }
+  .cmd code::-webkit-scrollbar { display: none; }
+  .cmd code .p { color: var(--muted); user-select: none; }
+  .copy {
+    flex: none;
+    border: 0;
+    border-radius: 8px;
+    background: var(--line);
+    color: var(--text);
+    font: 600 14px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+    min-height: 44px;
+    min-width: 72px;
+    padding: 0 16px;
+    cursor: pointer;
+  }
+  .copy:hover { filter: brightness(1.2); }
+
+  /* Screenshot */
+  .shot {
+    margin: 24px auto 0;
+    max-width: 780px;
+  }
+  /* The screenshots are window captures with transparent corners, so the shadow
+     follows the window's own shape. */
+  .shot img {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.28)) drop-shadow(0 0 1px rgba(0, 0, 0, 0.35));
+  }
+
+  /* Features */
+  section { padding: 72px 0 0; }
+  h2 {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+    font-size: clamp(28px, 4vw, 36px);
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+  .lede { color: var(--muted); margin: 0 0 32px; max-width: 38em; }
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .feature {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px;
+  }
+  .feature h3 { font-size: 17px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  kbd {
+    font: 600 13px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 2px 5px;
+    background: var(--bg);
+  }
+
+  /* First launch */
+  .steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 14px; }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 18px 22px 18px 64px;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    font-size: 16px;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 20px;
+    top: 17px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--text);
+    color: var(--bg);
+    font-weight: 700;
+    font-size: 14px;
+    display: grid;
+    place-items: center;
+  }
+  .steps b { font-weight: 600; }
+  .note { color: var(--muted); font-size: 15px; margin: 18px 0 0; }
+  .note a, .hint a { padding: 12px 0; }
+
+  .closing { text-align: center; padding-top: 96px; }
+  .closing .icon-sm { width: 88px; height: 88px; display: block; margin: 0 auto 16px; }
+  .closing h2 { margin-bottom: 8px; }
+  .closing .lede { margin: 0 auto 28px; text-wrap: balance; }
+
+  footer {
+    margin-top: 88px;
+    padding: 16px 0 28px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 4px 20px;
+  }
+  footer a { text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
+  footer .links { display: flex; gap: 20px; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 560px) {
+    .hero { padding-top: 56px; }
+    .icon { width: 116px; height: 116px; }
+    .steps li { padding-left: 58px; }
+    .steps li::before { left: 16px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <img class="icon" src="icon.png" alt="" width="148" height="148">
+    <h1>Barnacles</h1>
+    <p class="tagline">Run <strong>several Orca instances side by side</strong> on your Mac, each with its own projects and sessions.</p>
+
+    <a class="download" href="https://github.com/eloigil/barnacles/releases/latest/download/Barnacles.dmg">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 17h12"/></svg>
+      Download for Mac
+    </a>
+    <p class="meta"><span class="nw"><span id="version">Latest version</span> ·</span> <span class="nw">macOS 14 or later ·</span> <span class="nw">Apple silicon and Intel · Free</span></p>
+    <p class="hint">macOS asks you to confirm it the first time. <a class="nw" href="#first-launch">Here's how</a></p>
+
+    <div class="terminal">
+      <p>Or install from Terminal:</p>
+      <div class="cmd">
+        <code tabindex="0" aria-label="Install command"><span class="p">$ </span><span id="install-cmd">curl -fsSL https://raw.githubusercontent.com/eloigil/barnacles/main/install.sh | bash</span></code>
+        <button class="copy" type="button" data-copy="install-cmd">Copy</button>
+      </div>
+      <p class="sr-only" role="status" id="copy-status"></p>
+    </div>
+  </header>
+
+  <div class="shot">
+    <picture>
+      <source type="image/avif" media="(prefers-color-scheme: dark)" srcset="shot-dark-780.avif 780w, shot-dark-1520.avif 1520w" sizes="(max-width: 820px) calc(100vw - 40px), 780px">
+      <source type="image/avif" srcset="shot-light-780.avif 780w, shot-light-1520.avif 1520w" sizes="(max-width: 820px) calc(100vw - 40px), 780px">
+      <source media="(prefers-color-scheme: dark)" srcset="screenshot-dark.png">
+      <img src="screenshot-light.png" alt="The Barnacles window, listing four Orca instances: Client site, Code review, Experiments and Work" width="1520" height="1280" fetchpriority="high">
+    </picture>
+  </div>
+
+  <section>
+    <h2>One Orca wasn't enough.</h2>
+    <p class="lede">Orca lets only one instance run per profile. Barnacles gives each instance its own profile, so they never block each other, and your normal Orca keeps running as usual.</p>
+    <div class="features">
+      <div class="feature">
+        <h3>Separate instances</h3>
+        <p>Each barnacle has its own projects, workspaces and terminal sessions.</p>
+      </div>
+      <div class="feature">
+        <h3>Your settings, copied</h3>
+        <p>New barnacles start with your Orca's theme, fonts, agents and preferences.</p>
+      </div>
+      <div class="feature">
+        <h3>A new window, fast</h3>
+        <p>Right-click Barnacles in the Dock and choose New Orca Window, or press <kbd>⇧⌘N</kbd>.</p>
+      </div>
+      <div class="feature">
+        <h3>In Spotlight and the Dock</h3>
+        <p>Every barnacle gets a launcher with a colored badge. Search “Orca Work” to open it.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="first-launch">
+    <h2>Opening it the first time</h2>
+    <p class="lede">Barnacles isn't notarized by Apple yet, so macOS asks you to confirm it the first time. You only do this once. (The Terminal install above skips this step.)</p>
+    <ol class="steps">
+      <li>Open <b>Barnacles.dmg</b> and drag Barnacles into <b>Applications</b>.</li>
+      <li>Open Barnacles. macOS says it can't verify the developer. Click <b>Done</b>.</li>
+      <li>Open <b>System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b> next to Barnacles, then confirm.</li>
+    </ol>
+    <p class="note">You need <a href="https://github.com/stablyai/orca">Orca</a> installed. Barnacles never touches your code or repositories; deleting a barnacle moves only its Orca data to the Trash.</p>
+  </section>
+
+  <section class="closing">
+    <img class="icon-sm" src="icon.png" alt="" width="88" height="88" loading="lazy">
+    <h2>Get Barnacles</h2>
+    <p class="lede">Free for macOS 14 or later, on Apple silicon and Intel.</p>
+    <a class="download" href="https://github.com/eloigil/barnacles/releases/latest/download/Barnacles.dmg">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 17h12"/></svg>
+      Download for Mac
+    </a>
+  </section>
+
+  <footer>
+    <span>Barnacles isn't affiliated with Orca.</span>
+    <span class="links"><a href="https://github.com/eloigil/barnacles">Source on GitHub</a><a href="https://github.com/eloigil/barnacles/releases">Releases</a></span>
+  </footer>
+</main>
+
+<script>
+  // Show the latest version next to the download button. The page works without it.
+  fetch("https://api.github.com/repos/eloigil/barnacles/releases/latest")
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(release => {
+      document.getElementById("version").textContent = `Version ${release.tag_name.replace(/^v/, "")}`;
+    })
+    .catch(() => {});
+
+  // 5. Copy, announce the result to screen readers, and fall back to selecting
+  // the command when the clipboard isn't available.
+  const status = document.getElementById("copy-status");
+  document.querySelectorAll(".copy").forEach(button => {
+    button.addEventListener("click", async () => {
+      const target = document.getElementById(button.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(target.textContent);
+        button.textContent = "Copied";
+        status.textContent = "Install command copied.";
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        getSelection().removeAllRanges();
+        getSelection().addRange(range);
+        button.textContent = "Press ⌘C";
+        status.textContent = "Install command selected. Press Command C to copy it.";
+      }
+      setTimeout(() => { button.textContent = "Copy"; status.textContent = ""; }, 2000);
+    });
+  });
+
+  // 9. Fade the command's right edge while part of it is scrolled out of view.
+  document.querySelectorAll(".cmd code").forEach(code => {
+    const update = () => code.classList.toggle("more", code.scrollLeft + code.clientWidth < code.scrollWidth - 1);
+    code.addEventListener("scroll", update, { passive: true });
+    addEventListener("resize", update);
+    update();
+  });
+</script>
+</body>
+</html>

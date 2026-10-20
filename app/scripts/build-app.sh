@@ -4,16 +4,24 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-VERSION="1.0"
+# Version: $VERSION if set (the release workflow passes the tag), else the latest
+# v* tag, else 1.0.
+VERSION="${VERSION:-$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//' || true)}"
+VERSION="${VERSION:-1.0}"
 APP="build/Barnacles.app"
 WORK="build/work"
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Barnacles"
-
 rm -rf "$APP" "$WORK"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$WORK/AppIcon.iconset"
-cp "$BIN" "$APP/Contents/MacOS/Barnacles"
+
+# Universal binary (Apple silicon + Intel). The Command Line Tools can't build
+# both architectures in one go, so build each and merge them with lipo.
+BINS=()
+for arch in arm64 x86_64; do
+  swift build -c release --triple "$arch-apple-macosx14.0"
+  BINS+=("$(swift build -c release --triple "$arch-apple-macosx14.0" --show-bin-path)/Barnacles")
+done
+lipo -create "${BINS[@]}" -output "$APP/Contents/MacOS/Barnacles"
 
 # App icon, from the 1024px master in Resources/
 ICON="Resources/AppIcon.png"
@@ -48,4 +56,4 @@ EOF
 # Developer ID signature and notarization.
 codesign --force --sign - "$APP"
 rm -rf "$WORK"
-echo "Built $APP"
+echo "Built $APP ($VERSION)"
