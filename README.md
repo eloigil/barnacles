@@ -125,3 +125,7 @@ outside Orca's profile, so every instance shares them automatically.
   refuses to create or open an instance whose path is too long.
 - Set `BARNACLES_HOME`, `BARNACLES_APPS_DIR` or `BARNACLES_ORCA_APP` to change
   where data, launchers or Orca are found.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build Barnacles and try changes safely.
