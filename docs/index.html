@@ -78,6 +78,35 @@
     pointer-events: none;
   }
   .hero > * { position: relative; }
+
+  /* Star on GitHub, top right */
+  .star {
+    position: absolute;
+    top: 16px;
+    right: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .star svg { width: 16px; height: 16px; transition: fill 0.15s ease, color 0.15s ease; }
+  .star:hover svg { fill: #e3b341; color: #e3b341; }
+  .star .count {
+    color: var(--muted);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    padding-left: 10px;
+    border-left: 1px solid var(--line);
+  }
+  .star .count:empty { display: none; }
   .icon { width: 148px; height: 148px; display: block; margin: 0 auto 20px; }
   h1 {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
@@ -112,7 +141,7 @@
   .download:hover { transform: translateY(-1px); opacity: 0.92; }
   .download:active { transform: none; }
   @media (prefers-reduced-motion: reduce) {
-    .download { transition: none; }
+    .download, .star svg { transition: none; }
     .download:hover { transform: none; }
   }
   .download svg { width: 18px; height: 18px; }
@@ -265,7 +294,8 @@
   footer a:hover { text-decoration: underline; }
 
   @media (max-width: 560px) {
-    .hero { padding-top: 56px; }
+    .hero { padding-top: 84px; }
+    .star { top: 12px; }
     .icon { width: 116px; height: 116px; }
     .steps li { padding-left: 58px; }
     .steps li::before { left: 16px; }
@@ -275,6 +305,10 @@
 <body>
 <main class="wrap">
   <header class="hero">
+    <a class="star" href="https://github.com/eloigil/barnacles">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z"/></svg>
+      Star on GitHub<span class="count" id="stars"></span>
+    </a>
     <img class="icon" src="icon.png" alt="" width="148" height="148">
     <h1>Barnacles</h1>
     <p class="tagline">Run <strong>several Orca instances side by side</strong> on your Mac, each with its own projects and sessions.</p>
@@ -361,6 +395,17 @@
     .then(r => r.ok ? r.json() : Promise.reject())
     .then(release => {
       document.getElementById("version").textContent = `Version ${release.tag_name.replace(/^v/, "")}`;
+    })
+    .catch(() => {});
+
+  // Show the repository's star count on the Star button. The page works without it.
+  fetch("https://api.github.com/repos/eloigil/barnacles")
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(repo => {
+      const n = repo.stargazers_count;
+      if (!n) return;
+      const stars = document.getElementById("stars");
+      stars.textContent = n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n);
     })
     .catch(() => {});
 

@@ -21,6 +21,17 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 210, ideal: 230, max: 300)
         } detail: {
             detail
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            NSWorkspace.shared.open(GitHub.repo)
+                        } label: {
+                            Label("Star on GitHub", systemImage: "star")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .help("Like Barnacles? Star it on GitHub.")
+                    }
+                }
         }
         .navigationTitle("")
         .frame(minWidth: 720, minHeight: 480)

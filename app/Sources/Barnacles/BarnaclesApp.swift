@@ -1,6 +1,11 @@
 import AppKit
 import SwiftUI
 
+/// Barnacles' own source repository, for the "Star on GitHub" buttons.
+enum GitHub {
+    static let repo = URL(string: "https://github.com/eloigil/barnacles")!
+}
+
 @main
 struct BarnaclesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -60,6 +65,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 menu.addItem(item)
             }
         }
+
+        menu.addItem(.separator())
+        let star = ActionMenuItem("Star Barnacles on GitHub") { NSWorkspace.shared.open(GitHub.repo) }
+        star.image = NSImage(systemSymbolName: "star", accessibilityDescription: nil)
+        menu.addItem(star)
+
         dockMenu = menu
         return menu
     }
