@@ -123,9 +123,15 @@ outside Orca's profile, so every instance shares them automatically.
   `~/.barnacles/barnacles.json`. The path is kept short on purpose: Orca puts
   Unix sockets in that folder, and macOS caps socket paths at 103 characters. Barnacles
   refuses to create or open an instance whose path is too long.
-- Set `BARNACLES_HOME`, `BARNACLES_APPS_DIR` or `BARNACLES_ORCA_APP` to change
-  where data, launchers or Orca are found.
+- The command-line tool reads `BARNACLES_HOME`, `BARNACLES_APPS_DIR` and
+  `BARNACLES_ORCA_APP` to change where data, launchers or Orca are found. The app always
+  uses `~/.barnacles` and `~/Applications/Barnacles`, so if you change these, the app
+  won't see those barnacles.
 
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to build Barnacles and try changes safely.
+
+## License
+
+[MIT](LICENSE)
