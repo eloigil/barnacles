@@ -8,6 +8,8 @@ cd "$(dirname "$0")/.."
 # v* tag, else 1.0.
 VERSION="${VERSION:-$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//' || true)}"
 VERSION="${VERSION:-1.0}"
+# macOS wants a plain numeric version in the bundle, so 0.1-alpha becomes 0.1.
+BUNDLE_VERSION="${VERSION%%-*}"
 APP="build/Barnacles.app"
 WORK="build/work"
 
@@ -42,8 +44,8 @@ cat > "$APP/Contents/Info.plist" <<EOF
   <key>CFBundleExecutable</key><string>Barnacles</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>$VERSION</string>
-  <key>CFBundleVersion</key><string>$VERSION</string>
+  <key>CFBundleShortVersionString</key><string>$BUNDLE_VERSION</string>
+  <key>CFBundleVersion</key><string>$BUNDLE_VERSION</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.developer-tools</string>

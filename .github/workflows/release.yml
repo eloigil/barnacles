@@ -1,6 +1,7 @@
-# Pushing a tag like v1.1 builds Barnacles.dmg and publishes it as a GitHub Release.
-# The landing page and install.sh link to releases/latest/download/Barnacles.dmg,
-# so they always get the newest one.
+# Pushing a tag like v1.1 (or v0.1-alpha) builds Barnacles.dmg and publishes it as a
+# GitHub Release. The landing page and install.sh link to
+# releases/latest/download/Barnacles.dmg, so they always get the newest one. That link
+# skips releases marked as pre-releases, so alphas are published as normal releases.
 name: Release
 
 on:
