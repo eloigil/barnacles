@@ -23,6 +23,9 @@
     --btn-text: #ffffff;
     --code-bg: #ffffff;
     --accent: #23737e;
+    --notice-bg: #fbf3df;
+    --notice-line: rgba(154, 103, 0, 0.25);
+    --notice-icon: #9a6700;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -36,6 +39,9 @@
       --btn-text: #0b0b0c;
       --code-bg: #161618;
       --accent: #6cc6d1;
+      --notice-bg: rgba(210, 153, 34, 0.1);
+      --notice-line: rgba(210, 153, 34, 0.32);
+      --notice-icon: #e3b341;
     }
   }
 
@@ -197,6 +203,24 @@
   }
   .copy:hover { filter: brightness(1.2); }
 
+  /* Temporary-workaround notice */
+  .notice {
+    display: flex;
+    gap: 12px;
+    max-width: 640px;
+    margin: 36px auto 0;
+    padding: 14px 18px;
+    text-align: left;
+    background: var(--notice-bg);
+    border: 1px solid var(--notice-line);
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .notice svg { flex: none; width: 20px; height: 20px; margin-top: 1px; color: var(--notice-icon); }
+  .notice p { margin: 0; color: var(--muted); }
+  .notice strong { color: var(--text); font-weight: 600; }
+
   /* Screenshot */
   .shot {
     margin: 24px auto 0;
@@ -328,6 +352,11 @@
       </div>
       <p class="sr-only" role="status" id="copy-status"></p>
     </div>
+
+    <aside class="notice" aria-label="About this project">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 6.2v.1"/></svg>
+      <p><strong>A temporary hack.</strong> Barnacles works around Orca's one-window limit by giving each window its own profile. It will be discontinued once Orca supports multiple windows itself.</p>
+    </aside>
   </header>
 
   <div class="shot">

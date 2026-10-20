@@ -2,6 +2,11 @@
 
 Run several [Orca](https://github.com/stablyai/orca) instances side by side on macOS.
 
+> [!IMPORTANT]
+> Barnacles is a temporary hack. It works around Orca's one-window limit by giving each
+> window its own profile, and it will be discontinued once Orca supports multiple windows
+> itself.
+
 <picture>
   <source srcset="docs/screenshot-dark.png" media="(prefers-color-scheme: dark)">
   <img src="docs/screenshot-light.png" alt="The Barnacles window" width="640">
